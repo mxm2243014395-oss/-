@@ -1,0 +1,78 @@
+{% extends "orders/base.html" %}
+
+{% block content %}
+  <h2>订单预测</h2>
+
+  {% if not has_model %}
+    <div class="alert">
+      <strong>预测模型未安装</strong>。请在依赖中安装 <code>scikit-learn</code> 以启用线性回归预测。
+    </div>
+  {% endif %}
+
+  <p>基于最近 30 天的订单数据，预测未来 7 天的订单数量趋势。</p>
+
+  <section class="card">
+    <h3>历史订单数量（最近 30 天）</h3>
+    <canvas id="historyChart" height="160"></canvas>
+  </section>
+
+  <section class="card">
+    <h3>预测订单数量（未来 7 天）</h3>
+    <canvas id="forecastChart" height="160"></canvas>
+  </section>
+
+  <script>
+    const history = {{ history_json }};
+    const forecast = {{ forecast_json }};
+
+    const historyCtx = document.getElementById("historyChart").getContext("2d");
+    new Chart(historyCtx, {
+      type: "line",
+      data: {
+        labels: history.labels,
+        datasets: [
+          {
+            label: "历史订单数量",
+            data: history.orders,
+            borderColor: "#17a2b8",
+            backgroundColor: "rgba(23, 162, 184, 0.2)",
+            tension: 0.2,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "top" },
+        },
+      },
+    });
+
+    const forecastCtx = document.getElementById("forecastChart").getContext("2d");
+    new Chart(forecastCtx, {
+      type: "bar",
+      data: {
+        labels: forecast.labels,
+        datasets: [
+          {
+            label: "预测订单数量",
+            data: forecast.orders,
+            backgroundColor: "rgba(255, 193, 7, 0.6)",
+            borderColor: "rgba(255, 193, 7, 1)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true },
+        },
+        plugins: {
+          legend: { position: "top" },
+        },
+      },
+    });
+  </script>
+{% endblock %}

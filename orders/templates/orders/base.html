@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>智慧餐厅运营监控</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC8Xxj9K3hRjn8U72PiYF5fFqFCmKV0d9vFL72E+0tT8zDvSx5jKc7IUYY7r+7qj5yRVOgHP0h3fX1j6Y5rQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/static/orders/css/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+  </head>
+
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1>智慧餐厅运营监控</h1>
+        <nav>
+          <a href="{% url 'orders:dashboard' %}">监控</a>
+          <a href="{% url 'orders:forecast' %}">订单预测</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+      <div class="container">
+        <small>Smart Restaurant Dashboard • 简易演示</small>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+{% extends "orders/base.html" %}
+
+{% block content %}
+  <h2>运营监控</h2>
+  <p>下面展示了最近 30 天的订单数量和营收趋势。</p>
+
+  <section class="card">
+    <h3>订单数量（近 30 天）</h3>
+    <canvas id="ordersChart" height="160"></canvas>
+  </section>
+
+  <section class="card">
+    <h3>营收（近 30 天）</h3>
+    <canvas id="revenueChart" height="160"></canvas>
+  </section>
+
+  <script>
+    const chart = {{ chart_json }};
+    const labels = chart.labels;
+    const orders = chart.orders;
+    const revenue = chart.revenue;
+
+    const ordersCtx = document.getElementById("ordersChart").getContext("2d");
+    new Chart(ordersCtx, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "订单数量",
+            data: orders,
+            borderColor: "#007bff",
+            backgroundColor: "rgba(0, 123, 255, 0.2)",
+            tension: 0.2,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { position: "top" },
+        },
+      },
+    });
+
+    const revenueCtx = document.getElementById("revenueChart").getContext("2d");
+    new Chart(revenueCtx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "营收 (￥)",
+            data: revenue,
+            backgroundColor: "rgba(40, 167, 69, 0.6)",
+            borderColor: "rgba(40, 167, 69, 1)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { beginAtZero: true },
+        },
+        plugins: {
+          legend: { position: "top" },
+        },
+      },
+    });
+  </script>
+{% endblock %}
