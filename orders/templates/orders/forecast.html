@@ -5,25 +5,76 @@
 
   {% if not has_model %}
     <div class="alert">
-      <strong>预测模型未安装</strong>。请在依赖中安装 <code>scikit-learn</code> 以启用线性回归预测。
+      <strong>预测模型未安装</strong>。请在依赖中安装 <code>scikit-learn</code> 以启用预测功能。
     </div>
   {% endif %}
 
-  <p>基于最近 30 天的订单数据，预测未来 7 天的订单数量趋势。</p>
+  <p>基于历史订单数据，使用机器学习模型预测未来订单数量趋势。</p>
+
+  <div class="forecast-controls">
+    <form method="get" class="control-form">
+      <div class="control-group">
+        <label for="days">历史天数:</label>
+        <select id="days" name="days">
+          <option value="7" {% if historical_days == 7 %}selected{% endif %}>7天</option>
+          <option value="14" {% if historical_days == 14 %}selected{% endif %}>14天</option>
+          <option value="30" {% if historical_days == 30 %}selected{% endif %}>30天</option>
+          <option value="60" {% if historical_days == 60 %}selected{% endif %}>60天</option>
+          <option value="90" {% if historical_days == 90 %}selected{% endif %}>90天</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="forecast">预测天数:</label>
+        <select id="forecast" name="forecast">
+          <option value="3" {% if forecast_days == 3 %}selected{% endif %}>3天</option>
+          <option value="7" {% if forecast_days == 7 %}selected{% endif %}>7天</option>
+          <option value="14" {% if forecast_days == 14 %}selected{% endif %}>14天</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-primary">重新预测</button>
+    </form>
+  </div>
+
+  <div class="summary-cards">
+    <div class="summary-card">
+      <h4>历史数据</h4>
+      <div class="metric">{{ total_historical }}</div>
+      <small>{{ historical_days }}天总订单</small>
+      <div class="sub-metric">日均: {{ avg_historical }}</div>
+    </div>
+    <div class="summary-card">
+      <h4>预测数据</h4>
+      <div class="metric">{{ total_forecast }}</div>
+      <small>{{ forecast_days }}天预测</small>
+      <div class="sub-metric">日均: {{ avg_forecast }}</div>
+    </div>
+    {% if accuracy_info.mape %}
+    <div class="summary-card">
+      <h4>预测准确性</h4>
+      <div class="metric">{{ accuracy_info.mape }}%</div>
+      <small>MAPE误差率</small>
+      <div class="sub-metric">越低越准确</div>
+    </div>
+    {% endif %}
+  </div>
 
   <section class="card">
-    <h3>历史订单数量（最近 30 天）</h3>
+    <h3>历史订单数量（最近 {{ historical_days }} 天）</h3>
     <canvas id="historyChart" height="160"></canvas>
   </section>
 
   <section class="card">
-    <h3>预测订单数量（未来 7 天）</h3>
+    <h3>预测订单数量（未来 {{ forecast_days }} 天）</h3>
     <canvas id="forecastChart" height="160"></canvas>
   </section>
 
+  {{ history_data|json_script:"history-data-script" }}
+  {{ forecast_data|json_script:"forecast-data-script" }}
+
   <script>
-    const history = {{ history_json }};
-    const forecast = {{ forecast_json }};
+    // 从 script 标签中安全读取数据
+    const history = JSON.parse(document.getElementById('history-data-script').textContent);
+    const forecast = JSON.parse(document.getElementById('forecast-data-script').textContent);
 
     const historyCtx = document.getElementById("historyChart").getContext("2d");
     new Chart(historyCtx, {
@@ -38,6 +89,8 @@
             backgroundColor: "rgba(23, 162, 184, 0.2)",
             tension: 0.2,
             fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
           },
         ],
       },
@@ -46,6 +99,18 @@
         plugins: {
           legend: { position: "top" },
         },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
       },
     });
 
@@ -58,21 +123,33 @@
           {
             label: "预测订单数量",
             data: forecast.orders,
-            backgroundColor: "rgba(255, 193, 7, 0.6)",
+            backgroundColor: "rgba(255, 193, 7, 0.7)",
             borderColor: "rgba(255, 193, 7, 1)",
             borderWidth: 1,
+            borderRadius: 4,
+            hoverBackgroundColor: "rgba(255, 193, 7, 0.9)",
           },
         ],
       },
       options: {
         responsive: true,
         scales: {
-          y: { beginAtZero: true },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
         },
         plugins: {
           legend: { position: "top" },
         },
+        interaction: {
+          intersect: false,
+          mode: 'index'
+        }
       },
     });
   </script>
+
 {% endblock %}

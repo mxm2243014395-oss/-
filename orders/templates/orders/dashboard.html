@@ -2,33 +2,102 @@
 
 {% block content %}
   <h2>运营监控</h2>
-  <p>下面展示了最近 30 天的订单数量和营收趋势。</p>
+  <p>智能餐厅订单监控和分析仪表板</p>
+
+  <div class="filters">
+    <form method="get" class="filter-form">
+      <div class="filter-group">
+        <label for="start_date">开始日期:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ start_date }}">
+      </div>
+      <div class="filter-group">
+        <label for="end_date">结束日期:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ end_date }}">
+      </div>
+      <div class="filter-group">
+        <label for="restaurant">餐厅:</label>
+        <input type="text" id="restaurant" name="restaurant" value="{{ restaurant }}" placeholder="输入餐厅名称">
+      </div>
+      <div class="filter-group">
+        <label for="limit">数据限制:</label>
+        <select id="limit" name="limit">
+          <option value="100" {% if limit == 100 %}selected{% endif %}>100条</option>
+          <option value="500" {% if limit == 500 %}selected{% endif %}>500条</option>
+          <option value="1000" {% if limit == 1000 %}selected{% endif %}>1000条</option>
+          <option value="5000" {% if limit == 5000 %}selected{% endif %}>5000条</option>
+          <option value="10000" {% if limit == 10000 %}selected{% endif %}>10000条</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-primary">筛选</button>
+      <a href="{% url 'orders:dashboard' %}" class="btn-secondary">重置</a>
+    </form>
+  </div>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <h3>总订单数</h3>
+      <div class="metric-value">{{ total_orders }}</div>
+    </div>
+    <div class="metric-card">
+      <h3>总营收</h3>
+      <div class="metric-value">￥{{ total_revenue }}</div>
+    </div>
+    <div class="metric-card">
+      <h3>平均订单价值</h3>
+      <div class="metric-value">￥{{ avg_order_value }}</div>
+    </div>
+    <div class="metric-card">
+      <h3>数据记录数</h3>
+      <div class="metric-value">{{ orders_count }}</div>
+    </div>
+  </div>
+
+  {% if top_items %}
+  <section class="card">
+    <h3>热门菜品</h3>
+    <div class="top-items">
+      {% for item, count in top_items %}
+      <div class="item-bar">
+        <span class="item-name">{{ item }}</span>
+        <span class="item-count">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
 
   <section class="card">
-    <h3>订单数量（近 30 天）</h3>
+    <h3>热销菜品 TOP5</h3>
+    <div id="topDishesChart" style="width: 100%; height: 400px;"></div>
+  </section>
+
+  <section class="card">
+    <h3>订单趋势</h3>
     <canvas id="ordersChart" height="160"></canvas>
   </section>
 
-  <section class="card">
-    <h3>营收（近 30 天）</h3>
-    <canvas id="revenueChart" height="160"></canvas>
-  </section>
+  <!-- 使用 json_script 标签安全传递数据，防止 XSS 攻击 -->
+  {% load static %}
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  {{ chart_labels|json_script:"chartLabels" }}
+  {{ chart_values|json_script:"chartValues" }}
+  {{ top_dishes_labels|json_script:"topDishesLabels" }}
+  {{ top_dishes_values|json_script:"topDishesValues" }}
 
   <script>
-    const chart = {{ chart_json }};
-    const labels = chart.labels;
-    const orders = chart.orders;
-    const revenue = chart.revenue;
-
+    // 订单趋势图表 (使用 Chart.js)
     const ordersCtx = document.getElementById("ordersChart").getContext("2d");
+    const chartLabels = JSON.parse(document.getElementById('chartLabels').textContent);
+    const chartValues = JSON.parse(document.getElementById('chartValues').textContent);
+
     new Chart(ordersCtx, {
       type: "line",
       data: {
-        labels,
+        labels: chartLabels,
         datasets: [
           {
-            label: "订单数量",
-            data: orders,
+            label: "每日订单数",
+            data: chartValues,
             borderColor: "#007bff",
             backgroundColor: "rgba(0, 123, 255, 0.2)",
             tension: 0.2,
@@ -41,33 +110,56 @@
         plugins: {
           legend: { position: "top" },
         },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
       },
     });
 
-    const revenueCtx = document.getElementById("revenueChart").getContext("2d");
-    new Chart(revenueCtx, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "营收 (￥)",
-            data: revenue,
-            backgroundColor: "rgba(40, 167, 69, 0.6)",
-            borderColor: "rgba(40, 167, 69, 1)",
-            borderWidth: 1,
-          },
-        ],
+    // 热销菜品 TOP5 饼图 (使用 ECharts)
+    const topDishesChart = echarts.init(document.getElementById('topDishesChart'));
+    const topDishesLabels = JSON.parse(document.getElementById('topDishesLabels').textContent);
+    const topDishesValues = JSON.parse(document.getElementById('topDishesValues').textContent);
+
+    const option = {
+      title: {
+        text: '热销菜品 TOP5',
+        left: 'center'
       },
-      options: {
-        responsive: true,
-        scales: {
-          y: { beginAtZero: true },
-        },
-        plugins: {
-          legend: { position: "top" },
-        },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{a} <br/>{b}: {c} ({d}%)'
       },
-    });
+      legend: {
+        orient: 'vertical',
+        left: 'left'
+      },
+      series: [
+        {
+          name: '销量',
+          type: 'pie',
+          radius: '50%',
+          data: topDishesLabels.map((label, index) => ({
+            value: topDishesValues[index],
+            name: label
+          })),
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          }
+        }
+      ]
+    };
+
+    topDishesChart.setOption(option);
   </script>
+
 {% endblock %}
